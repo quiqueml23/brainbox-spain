@@ -1,111 +1,216 @@
-import { Eye, EyeOff, MapPin, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, MapPin, Play, Sparkles } from 'lucide-react';
 import { CATEGORY_LABELS, UI } from '../i18n/ui';
-import type { BrainCard, Locale } from '../types/card';
+import type { BrainCard, CardPhase, Locale } from '../types/card';
 import { LanguageToggle } from './LanguageToggle';
 
 interface GameCardProps {
   card: BrainCard;
-  flipped: boolean;
+  phase: CardPhase;
   peekingFront: boolean;
   studyLocale: Locale;
   questionLocale: Locale;
+  currentPlayerName: string;
+  currentPlayerScore: number;
   rolledNumber: number | null;
   revealedAnswers: Record<number, boolean>;
   onChangeStudyLocale: (loc: Locale) => void;
   onChangeQuestionLocale: (loc: Locale) => void;
+  onStartStudying: () => void;
   onToggleAnswer: (num: number) => void;
   onTogglePeekFront: () => void;
 }
 
 export function GameCard({
   card,
-  flipped,
+  phase,
   peekingFront,
   studyLocale,
   questionLocale,
+  currentPlayerName,
+  currentPlayerScore,
   rolledNumber,
   revealedAnswers,
   onChangeStudyLocale,
   onChangeQuestionLocale,
+  onStartStudying,
   onToggleAnswer,
   onTogglePeekFront,
 }: GameCardProps) {
-  const showBack = flipped && !peekingFront;
+  const isPrep = phase === 'prep';
+  const isQuestions = phase === 'questions' && !peekingFront;
   const studyUI = UI[studyLocale];
   const questionUI = UI[questionLocale];
 
+  // 1. PRE-REVEAL SCREEN (Before the timer starts)
+  if (isPrep) {
+    return (
+      <div className="w-full">
+        <div
+          className="relative overflow-hidden rounded-3xl border-4 bg-white p-5 shadow-2xl transition-all sm:p-6"
+          style={{ borderColor: card.accentColor }}
+        >
+          {/* Subtle decorative background watermark */}
+          <div
+            className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full opacity-10"
+            style={{ backgroundColor: card.accentColor }}
+          />
+
+          {/* Turn Banner */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-3">
+            <div className="flex items-center gap-2">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold text-white shadow-sm"
+                style={{ backgroundColor: card.accentColor }}
+              >
+                {currentPlayerName.charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  {studyUI.turnOf}
+                </span>
+                <p className="text-sm font-bold text-slate-900 leading-none">
+                  {currentPlayerName}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-full bg-saffron/20 px-3 py-1 text-xs font-bold text-amber-900">
+              {currentPlayerScore} {studyUI.cardsWon}
+            </div>
+          </div>
+
+          {/* Card Presentation */}
+          <div className="my-5 text-center">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm"
+              style={{ backgroundColor: card.accentColor }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {CATEGORY_LABELS[card.category][studyLocale]}
+            </span>
+
+            <h2 className="mt-3 font-display text-3xl font-bold text-cobalt sm:text-4xl">
+              {card.title[studyLocale]}
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-slate-600 sm:text-base">
+              {card.subtitle[studyLocale]}
+            </p>
+
+            <div className="mt-2 flex items-center justify-center gap-2 text-xs font-medium text-slate-500">
+              <MapPin className="h-3.5 w-3.5 text-terracotta" />
+              <span>{card.region[studyLocale]}</span>
+              <span>·</span>
+              <span>{card.era[studyLocale]}</span>
+            </div>
+          </div>
+
+          {/* Language Selector for this card */}
+          <div className="rounded-2xl bg-parchment/90 p-4 border border-amber-900/10 text-center">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-700">
+              {studyUI.prepLangHeading}
+            </p>
+            <div className="mt-2 flex justify-center">
+              <LanguageToggle
+                value={studyLocale}
+                onChange={onChangeStudyLocale}
+                size="md"
+              />
+            </div>
+          </div>
+
+          <p className="mt-3 text-center text-xs text-slate-500">
+            {studyUI.prepInstructions}
+          </p>
+
+          {/* Big Start Studying Button */}
+          <button
+            type="button"
+            onClick={onStartStudying}
+            className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-2xl bg-terracotta py-4 text-base font-bold text-white shadow-lg shadow-terracotta/30 transition hover:bg-terracotta/95 active:scale-[0.98] sm:text-lg"
+          >
+            <Play className="h-5 w-5 fill-current" />
+            <span>{studyUI.startStudyBtn}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. REVEALED CARD (Studying vs Questions)
   return (
     <div className="perspective-1200 w-full">
       <div
         className={`preserve-3d relative w-full transition-transform duration-500 ease-out ${
-          showBack ? 'rotate-y-180' : ''
+          isQuestions ? 'rotate-y-180' : ''
         }`}
       >
-        {/* FRONT: STUDY SIDE */}
+        {/* FRONT: STUDY SIDE (BRAINBOX MULTI-VIGNETTE STYLE) */}
         <div
-          className={`backface-hidden w-full rounded-3xl border-4 bg-white p-4 shadow-xl sm:p-5 ${
-            showBack ? 'pointer-events-none invisible absolute inset-0' : 'relative'
+          className={`backface-hidden w-full rounded-3xl border-4 bg-white p-3.5 shadow-xl sm:p-5 ${
+            isQuestions ? 'pointer-events-none invisible absolute inset-0' : 'relative'
           }`}
           style={{ borderColor: card.accentColor }}
         >
-          {/* Card Header */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white"
-              style={{ backgroundColor: card.accentColor }}
-            >
-              <Sparkles className="h-3 w-3" />
-              {CATEGORY_LABELS[card.category][studyLocale]}
-            </span>
+          {/* Card Top Strip */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white"
+                style={{ backgroundColor: card.accentColor }}
+              >
+                <Sparkles className="h-3 w-3" />
+                {CATEGORY_LABELS[card.category][studyLocale]}
+              </span>
+              <span className="text-xs font-bold text-slate-600">
+                {card.region[studyLocale]}
+              </span>
+            </div>
 
             <LanguageToggle value={studyLocale} onChange={onChangeStudyLocale} size="sm" />
           </div>
 
-          {/* Title & Region */}
-          <div className="mt-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500">
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5 text-terracotta" />
-                {card.region[studyLocale]}
-              </span>
-              <span className="rounded-md bg-amber-950/5 px-2 py-0.5 font-semibold text-slate-700">
-                {card.era[studyLocale]}
-              </span>
-            </div>
-            <h2 className="mt-1 font-display text-2xl font-bold leading-tight text-cobalt sm:text-3xl">
+          {/* Header Title */}
+          <div className="mt-2 text-center">
+            <h2 className="font-display text-2xl font-bold leading-tight text-cobalt sm:text-3xl">
               {card.title[studyLocale]}
             </h2>
-            <p className="text-sm font-medium text-slate-600">{card.subtitle[studyLocale]}</p>
+            <p className="text-xs font-semibold text-slate-600 sm:text-sm">
+              {card.subtitle[studyLocale]}
+            </p>
           </div>
 
-          {/* Illustration */}
-          <div className="mt-3 overflow-hidden rounded-2xl border-2 border-amber-900/10 bg-parchment shadow-inner">
-            <img
-              src={card.image}
-              alt={card.title[studyLocale]}
-              className="aspect-square w-full object-cover"
-              loading="eager"
-            />
-          </div>
-
-          {/* Concise Memorizable Facts */}
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {card.facts.map((fact) => (
+          {/* BrainBox Multi-Image Grid with Captions Underneath */}
+          <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {card.vignettes.map((v) => (
               <div
-                key={fact.id}
-                className="rounded-xl border border-amber-900/10 bg-parchment/80 px-3 py-2"
+                key={v.id}
+                className="group flex flex-col overflow-hidden rounded-2xl border-2 border-amber-900/10 bg-parchment/60 p-2 shadow-sm transition hover:bg-parchment"
               >
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  {fact.label[studyLocale]}
+                {/* Vignette Illustration */}
+                <div className="relative aspect-video sm:aspect-square w-full overflow-hidden rounded-xl border border-amber-900/10 bg-white">
+                  <img
+                    src={v.image}
+                    alt={v.title[studyLocale]}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="eager"
+                  />
                 </div>
-                <div className="mt-0.5 text-xs font-bold leading-snug text-slate-900 sm:text-sm">
-                  {fact.value[studyLocale]}
+
+                {/* Vignette Data & Caption Underneath Image */}
+                <div className="mt-2 flex-1 text-center sm:text-left">
+                  <h4 className="text-xs font-bold text-cobalt leading-snug">
+                    {v.title[studyLocale]}
+                  </h4>
+                  <p className="mt-0.5 text-[11px] font-medium leading-relaxed text-slate-750 text-slate-700">
+                    {v.caption[studyLocale]}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
-          {flipped && peekingFront && (
+          {/* Peek Back Action */}
+          {phase === 'questions' && peekingFront && (
             <button
               type="button"
               onClick={onTogglePeekFront}
@@ -120,11 +225,11 @@ export function GameCard({
         {/* BACK: QUESTIONS SIDE */}
         <div
           className={`backface-hidden rotate-y-180 w-full rounded-3xl border-4 bg-parchment p-4 shadow-xl sm:p-5 ${
-            !showBack ? 'pointer-events-none invisible absolute inset-0' : 'relative'
+            !isQuestions ? 'pointer-events-none invisible absolute inset-0' : 'relative'
           }`}
           style={{ borderColor: card.accentColor }}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-2.5">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 {questionUI.questionSide}
@@ -137,7 +242,7 @@ export function GameCard({
             <LanguageToggle value={questionLocale} onChange={onChangeQuestionLocale} size="sm" />
           </div>
 
-          <p className="mt-1 text-xs text-slate-500">{questionUI.allQuestionsHint}</p>
+          <p className="mt-1.5 text-xs text-slate-500">{questionUI.allQuestionsHint}</p>
 
           <div className="mt-3 space-y-2">
             {card.questions.map((q) => {
@@ -159,14 +264,14 @@ export function GameCard({
                   className={`cursor-pointer rounded-2xl border-2 p-3 transition-all ${
                     isSelected
                       ? 'border-terracotta bg-white shadow-md ring-2 ring-saffron/40'
-                      : 'border-amber-900/10 bg-white/75 hover:border-amber-900/25 hover:bg-white'
+                      : 'border-amber-900/10 bg-white/80 hover:border-amber-900/25 hover:bg-white'
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     <span
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
                         isSelected
-                          ? 'bg-terracotta text-white'
+                          ? 'bg-terracotta text-white shadow-sm'
                           : 'bg-cobalt/10 text-cobalt'
                       }`}
                     >

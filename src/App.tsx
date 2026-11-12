@@ -4,7 +4,6 @@ import {
   Award,
   Check,
   Clock,
-  Globe2,
   Home,
   Play,
   Plus,
@@ -20,18 +19,65 @@ import { DiceRoller } from './components/DiceRoller';
 import { GameCard } from './components/GameCard';
 import { LanguageToggle } from './components/LanguageToggle';
 import { SandTimer } from './components/SandTimer';
+import { WonCardsModal } from './components/WonCardsModal';
 import { CARDS } from './data/cards';
 import { UI } from './i18n/ui';
-import type { BrainCard, GameMode, Locale, TimerDuration } from './types/card';
+import type {
+  BrainCard,
+  CardPhase,
+  GameMode,
+  Locale,
+  PlayerProfile,
+  TimerDuration,
+} from './types/card';
 import { playFail, playSuccess, playTick, playTimeUp } from './utils/sound';
 
-interface Player {
-  id: string;
-  name: string;
-  score: number;
+type Screen = 'lobby' | 'playing' | 'summary';
+
+const STORAGE_KEY_PLAYERS = 'brainbox_spain_players_v2';
+const STORAGE_KEY_SETTINGS = 'brainbox_spain_settings_v2';
+
+const DEFAULT_PLAYERS: PlayerProfile[] = [
+  {
+    id: 'p1',
+    name: 'Quique',
+    studyLocale: 'es',
+    questionLocale: 'es',
+    score: 0,
+    wonCardIds: [],
+  },
+  {
+    id: 'p2',
+    name: 'Priateľ (Slovák)',
+    studyLocale: 'sk',
+    questionLocale: 'en',
+    score: 0,
+    wonCardIds: [],
+  },
+];
+
+function loadSavedPlayers(): PlayerProfile[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PLAYERS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // Ignore fallback to defaults
+  }
+  return DEFAULT_PLAYERS;
 }
 
-type Screen = 'lobby' | 'playing' | 'summary';
+function loadSavedSettings(): { timer: TimerDuration; mode: GameMode; muted: boolean } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // fallback
+  }
+  return { timer: 10, mode: 'multiplayer', muted: false };
+}
 
 function shuffleCards(cards: BrainCard[]): BrainCard[] {
   const copy = [...cards];
@@ -43,23 +89,21 @@ function shuffleCards(cards: BrainCard[]): BrainCard[] {
 }
 
 export function App() {
+  const savedSettings = useMemo(() => loadSavedSettings(), []);
   const [screen, setScreen] = useState<Screen>('lobby');
-  const [mode, setMode] = useState<GameMode>('solo');
-  const [studyLocale, setStudyLocale] = useState<Locale>('es');
-  const [questionLocale, setQuestionLocale] = useState<Locale>('es');
-  const [timerDuration, setTimerDuration] = useState<TimerDuration>(10);
-  const [muted, setMuted] = useState(false);
+  const [mode, setMode] = useState<GameMode>(savedSettings.mode);
+  const [timerDuration, setTimerDuration] = useState<TimerDuration>(savedSettings.timer);
+  const [muted, setMuted] = useState(savedSettings.muted);
 
-  const [players, setPlayers] = useState<Player[]>([
-    { id: 'p1', name: 'Jugador 1', score: 0 },
-    { id: 'p2', name: 'Jugador 2', score: 0 },
-  ]);
+  const [players, setPlayers] = useState<PlayerProfile[]>(() => loadSavedPlayers());
+  const [inspectingPlayer, setInspectingPlayer] = useState<PlayerProfile | null>(null);
 
   const [deck, setDeck] = useState<BrainCard[]>(() => shuffleCards(CARDS));
   const [cardIndex, setCardIndex] = useState(0);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
 
-  const [flipped, setFlipped] = useState(false);
+  // Card Phase: 'prep' -> 'studying' -> 'questions'
+  const [phase, setPhase] = useState<CardPhase>('prep');
   const [peekingFront, setPeekingFront] = useState(false);
   const [remaining, setRemaining] = useState<number>(10);
   const [rolledNumber, setRolledNumber] = useState<number | null>(null);
@@ -67,21 +111,55 @@ export function App() {
   const [revealedAnswers, setRevealedAnswers] = useState<Record<number, boolean>>({});
   const [roundScored, setRoundScored] = useState<'won' | 'lost' | null>(null);
 
-  const t = UI[studyLocale];
-  const activeCard = deck[cardIndex];
+  // Active languages for current turn
+  const [activeStudyLocale, setActiveStudyLocale] = useState<Locale>('es');
+  const [activeQuestionLocale, setActiveQuestionLocale] = useState<Locale>('es');
+
+  // Persist players and settings
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PLAYERS, JSON.stringify(players));
+    } catch {
+      // ignore
+    }
+  }, [players]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY_SETTINGS,
+        JSON.stringify({ timer: timerDuration, mode, muted }),
+      );
+    } catch {
+      // ignore
+    }
+  }, [timerDuration, mode, muted]);
+
   const activePlayers = useMemo(
     () => (mode === 'solo' ? [players[0]] : players),
     [mode, players],
   );
   const currentPlayer = activePlayers[currentPlayerIndex % activePlayers.length];
+  const activeCard = deck[cardIndex];
 
-  // Countdown timer effect while studying front of card
+  // Set card languages whenever current player changes or when new card begins
   useEffect(() => {
-    if (screen !== 'playing' || flipped || timerDuration === 0) return;
+    if (currentPlayer) {
+      setActiveStudyLocale(currentPlayer.studyLocale);
+      setActiveQuestionLocale(currentPlayer.questionLocale);
+    }
+  }, [currentPlayerIndex, currentPlayer]);
+
+  const t = UI[activeStudyLocale];
+
+  // Countdown timer effect during studying phase
+  useEffect(() => {
+    if (screen !== 'playing' || phase !== 'studying' || timerDuration === 0) return;
 
     if (remaining <= 0) {
       playTimeUp(muted);
-      setFlipped(true);
+      setPhase('questions');
+      handleRollDice();
       return;
     }
 
@@ -94,26 +172,33 @@ export function App() {
     }, 1000);
 
     return () => window.clearTimeout(id);
-  }, [screen, flipped, timerDuration, remaining, muted]);
+  }, [screen, phase, timerDuration, remaining, muted]);
 
-  function startNewGame() {
+  function startNewGame(keepPoints = false) {
     const freshDeck = shuffleCards(CARDS);
     setDeck(freshDeck);
     setCardIndex(0);
     setCurrentPlayerIndex(0);
-    setPlayers((prev) => prev.map((p) => ({ ...p, score: 0 })));
+    if (!keepPoints) {
+      setPlayers((prev) => prev.map((p) => ({ ...p, score: 0, wonCardIds: [] })));
+    }
     resetRoundState(timerDuration);
     setScreen('playing');
   }
 
   function resetRoundState(duration: TimerDuration) {
-    setFlipped(false);
+    setPhase('prep');
     setPeekingFront(false);
     setRemaining(duration);
     setRolledNumber(null);
     setRolling(false);
     setRevealedAnswers({});
     setRoundScored(null);
+  }
+
+  function handleStartStudying() {
+    setPhase('studying');
+    setRemaining(timerDuration);
   }
 
   function handleRollDice() {
@@ -127,18 +212,28 @@ export function App() {
   }
 
   function handleFlipNow() {
-    setFlipped(true);
+    setPhase('questions');
     if (rolledNumber === null) {
       handleRollDice();
     }
   }
 
   function handleScore(won: boolean) {
-    if (roundScored !== null) return;
+    if (roundScored !== null || !activeCard) return;
     if (won) {
       playSuccess(muted);
       setPlayers((prev) =>
-        prev.map((p) => (p.id === currentPlayer.id ? { ...p, score: p.score + 1 } : p)),
+        prev.map((p) =>
+          p.id === currentPlayer.id
+            ? {
+                ...p,
+                score: p.score + 1,
+                wonCardIds: p.wonCardIds.includes(activeCard.id)
+                  ? p.wonCardIds
+                  : [...p.wonCardIds, activeCard.id],
+              }
+            : p,
+        ),
       );
       setRoundScored('won');
     } else {
@@ -164,7 +259,14 @@ export function App() {
     const nextNum = players.length + 1;
     setPlayers((prev) => [
       ...prev,
-      { id: `p-${Date.now()}`, name: `${t.playerDefault} ${nextNum}`, score: 0 },
+      {
+        id: `p-${Date.now()}`,
+        name: `${t.playerDefault} ${nextNum}`,
+        studyLocale: 'es',
+        questionLocale: 'es',
+        score: 0,
+        wonCardIds: [],
+      },
     ]);
   }
 
@@ -173,14 +275,18 @@ export function App() {
     setPlayers((prev) => prev.filter((p) => p.id !== id));
   }
 
-  function updatePlayerName(id: string, name: string) {
-    setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
+  function updatePlayer(id: string, updates: Partial<PlayerProfile>) {
+    setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+  }
+
+  function resetAllScores() {
+    setPlayers((prev) => prev.map((p) => ({ ...p, score: 0, wonCardIds: [] })));
   }
 
   return (
     <div className="min-h-screen px-3 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-xl">
-        {/* Top Bar */}
+        {/* TOP BAR */}
         <header className="mb-4 flex items-center justify-between gap-2">
           <button
             type="button"
@@ -194,7 +300,9 @@ export function App() {
               <h1 className="font-display text-lg font-bold leading-none text-cobalt sm:text-xl">
                 {t.appTitle}
               </h1>
-              <span className="text-[11px] font-semibold text-slate-500">ES · SK · EN</span>
+              <span className="text-[11px] font-semibold text-slate-500">
+                ES · SK · EN · BrainBox España
+              </span>
             </div>
           </button>
 
@@ -226,32 +334,7 @@ export function App() {
             <section className="rounded-3xl border border-amber-900/10 bg-white p-5 shadow-md">
               <p className="text-sm leading-relaxed text-slate-600">{t.appSubtitle}</p>
 
-              {/* Languages */}
-              <div className="mt-5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600">
-                    <Globe2 className="h-4 w-4 text-terracotta" />
-                    {t.studyLangLabel}
-                  </span>
-                  <LanguageToggle
-                    value={studyLocale}
-                    onChange={(loc) => {
-                      setStudyLocale(loc);
-                      setQuestionLocale(loc);
-                    }}
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600">
-                    <Globe2 className="h-4 w-4 text-cobalt" />
-                    {t.questionLangLabel}
-                  </span>
-                  <LanguageToggle value={questionLocale} onChange={setQuestionLocale} />
-                </div>
-              </div>
-
-              {/* Game Mode */}
+              {/* Mode Selection */}
               <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <button
                   type="button"
@@ -286,35 +369,56 @@ export function App() {
                 </button>
               </div>
 
-              {/* Players list when multiplayer */}
-              {mode === 'multiplayer' && (
-                <div className="mt-4 rounded-2xl bg-parchment p-3.5">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wide text-slate-600">
-                      {t.playersLabel} ({players.length}/6)
-                    </span>
-                    {players.length < 6 && (
-                      <button
-                        type="button"
-                        onClick={addPlayer}
-                        className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-cobalt shadow-sm"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        {t.addPlayer}
-                      </button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {players.map((p, i) => (
-                      <div key={p.id} className="flex items-center gap-2">
-                        <span className="w-5 text-xs font-bold text-slate-500">#{i + 1}</span>
+              {/* Players with Per-Player Languages & Accumulated Points */}
+              <div className="mt-5 rounded-2xl bg-parchment/80 p-4 border border-amber-900/10">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-700">
+                    {t.playersLabel}
+                  </span>
+                  {mode === 'multiplayer' && players.length < 6 && (
+                    <button
+                      type="button"
+                      onClick={addPlayer}
+                      className="inline-flex items-center gap-1 rounded-xl bg-white px-2.5 py-1 text-xs font-semibold text-cobalt shadow-sm hover:bg-slate-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {t.addPlayer}
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {(mode === 'solo' ? [players[0]] : players).map((p, i) => (
+                    <div
+                      key={p.id}
+                      className="rounded-2xl border border-amber-900/10 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-cobalt/10 text-xs font-bold text-cobalt">
+                          #{i + 1}
+                        </span>
                         <input
                           type="text"
                           value={p.name}
-                          onChange={(e) => updatePlayerName(p.id, e.target.value)}
-                          className="flex-1 rounded-xl border border-amber-900/15 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 focus:border-terracotta focus:outline-none"
+                          onChange={(e) => updatePlayer(p.id, { name: e.target.value })}
+                          className="flex-1 rounded-xl border border-amber-900/15 px-3 py-1 text-sm font-bold text-slate-900 focus:border-terracotta focus:outline-none"
+                          placeholder={t.playerDefault}
                         />
-                        {players.length > 2 && (
+
+                        {/* Player Score Badge / Card pile */}
+                        <button
+                          type="button"
+                          onClick={() => setInspectingPlayer(p)}
+                          className="flex items-center gap-1.5 rounded-xl bg-saffron/20 px-2.5 py-1 text-xs font-bold text-amber-950 transition hover:bg-saffron/30"
+                          title={t.viewWonCards}
+                        >
+                          <Award className="h-3.5 w-3.5 text-terracotta" />
+                          <span>
+                            {p.score} {t.cardsWon}
+                          </span>
+                        </button>
+
+                        {mode === 'multiplayer' && players.length > 2 && (
                           <button
                             type="button"
                             onClick={() => removePlayer(p.id)}
@@ -325,14 +429,49 @@ export function App() {
                           </button>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* Timer Duration */}
+                      {/* Individual Player Language Selection */}
+                      <div className="mt-2.5 grid grid-cols-1 gap-2 border-t border-amber-900/10 pt-2.5 sm:grid-cols-2">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            {t.playerStudyShort}
+                          </span>
+                          <LanguageToggle
+                            value={p.studyLocale}
+                            onChange={(loc) => updatePlayer(p.id, { studyLocale: loc })}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-semibold text-slate-500">
+                            {t.playerQuestionShort}
+                          </span>
+                          <LanguageToggle
+                            value={p.questionLocale}
+                            onChange={(loc) => updatePlayer(p.id, { questionLocale: loc })}
+                            size="sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Score Reset Button */}
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={resetAllScores}
+                    className="text-xs font-semibold text-slate-500 hover:text-terracotta underline"
+                  >
+                    {t.resetScores}
+                  </button>
+                </div>
+              </div>
+
+              {/* Timer Duration Setting */}
               <div className="mt-5">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-600">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-700">
                   <Clock className="h-4 w-4 text-terracotta" />
                   {t.timerLabel}
                 </span>
@@ -357,15 +496,17 @@ export function App() {
                 </div>
               </div>
 
-              {/* Start Button */}
-              <button
-                type="button"
-                onClick={startNewGame}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-terracotta py-3.5 text-base font-bold text-white shadow-lg shadow-terracotta/25 transition hover:bg-terracotta/95 active:scale-[0.99]"
-              >
-                <Play className="h-5 w-5 fill-current" />
-                {t.startGame} ({CARDS.length} {t.cardsWon})
-              </button>
+              {/* Start Buttons: Fresh vs Keep Points */}
+              <div className="mt-6 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => startNewGame(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-terracotta py-3.5 text-base font-bold text-white shadow-lg shadow-terracotta/25 transition hover:bg-terracotta/95 active:scale-[0.99]"
+                >
+                  <Play className="h-5 w-5 fill-current" />
+                  {t.startGame} ({CARDS.length} {t.cardsWon})
+                </button>
+              </div>
             </section>
 
             {/* Quick Rules */}
@@ -383,8 +524,8 @@ export function App() {
         {/* PLAYING SCREEN */}
         {screen === 'playing' && activeCard && (
           <main className="space-y-3.5">
-            {/* Status & Score Strip */}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-900/10 bg-white/90 px-3.5 py-2.5 shadow-sm">
+            {/* Top Match Progress & Player Piles Strip */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-900/10 bg-white/95 px-3.5 py-2.5 shadow-sm">
               <div className="text-xs font-bold text-slate-600">
                 {t.cardOf}{' '}
                 <span className="text-cobalt">
@@ -392,28 +533,31 @@ export function App() {
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Player Score Badges (Click to inspect won cards) */}
+              <div className="flex flex-wrap items-center gap-1.5">
                 {activePlayers.map((p, idx) => {
                   const isTurn = idx === currentPlayerIndex % activePlayers.length;
                   return (
-                    <div
+                    <button
                       key={p.id}
-                      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+                      type="button"
+                      onClick={() => setInspectingPlayer(p)}
+                      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition ${
                         isTurn
-                          ? 'bg-cobalt text-white'
-                          : 'bg-amber-950/5 text-slate-600'
+                          ? 'bg-cobalt text-white shadow-sm ring-2 ring-saffron/50'
+                          : 'bg-amber-950/5 text-slate-700 hover:bg-amber-950/10'
                       }`}
                     >
                       <span>{p.name}:</span>
                       <span className="text-saffron">{p.score}</span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Timer (front) or Dice (back) */}
-            {!flipped ? (
+            {/* Sand Timer (only when studying) or Dice Roller (when in questions) */}
+            {phase === 'studying' && (
               <SandTimer
                 duration={timerDuration}
                 remaining={remaining}
@@ -421,7 +565,9 @@ export function App() {
                 labelUnlimited={t.unlimited}
                 onFlipEarly={handleFlipNow}
               />
-            ) : (
+            )}
+
+            {phase === 'questions' && (
               <DiceRoller
                 value={rolledNumber}
                 rolling={rolling}
@@ -431,25 +577,28 @@ export function App() {
               />
             )}
 
-            {/* The Card */}
+            {/* The Game Card (Prep, Study, or Questions) */}
             <GameCard
               card={activeCard}
-              flipped={flipped}
+              phase={phase}
               peekingFront={peekingFront}
-              studyLocale={studyLocale}
-              questionLocale={questionLocale}
+              studyLocale={activeStudyLocale}
+              questionLocale={activeQuestionLocale}
+              currentPlayerName={currentPlayer.name}
+              currentPlayerScore={currentPlayer.score}
               rolledNumber={rolledNumber}
               revealedAnswers={revealedAnswers}
-              onChangeStudyLocale={setStudyLocale}
-              onChangeQuestionLocale={setQuestionLocale}
+              onChangeStudyLocale={setActiveStudyLocale}
+              onChangeQuestionLocale={setActiveQuestionLocale}
+              onStartStudying={handleStartStudying}
               onToggleAnswer={(num) =>
                 setRevealedAnswers((prev) => ({ ...prev, [num]: !prev[num] }))
               }
               onTogglePeekFront={() => setPeekingFront((p) => !p)}
             />
 
-            {/* Scoring & Next Card Actions (when flipped) */}
-            {flipped && (
+            {/* Scoring & Next Card Actions (only in questions phase) */}
+            {phase === 'questions' && (
               <div className="sticky bottom-3 z-10 rounded-2xl border border-amber-900/15 bg-white/95 p-3 shadow-lg backdrop-blur-md">
                 {roundScored === null ? (
                   <div className="grid grid-cols-2 gap-2.5">
@@ -474,7 +623,7 @@ export function App() {
                   <button
                     type="button"
                     onClick={handleNextCard}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-cobalt py-3 text-sm font-bold text-white shadow-sm transition hover:bg-cobalt/90 active:scale-95"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-cobalt py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-cobalt/90 active:scale-95"
                   >
                     <span>{t.nextCard}</span>
                     <ArrowRight className="h-4 w-4" />
@@ -493,19 +642,29 @@ export function App() {
             </div>
             <h2 className="mt-3 font-display text-2xl font-bold text-cobalt">{t.gameOver}</h2>
 
+            {/* Scoreboard List */}
             <div className="mt-5 space-y-2">
               {[...activePlayers]
                 .sort((a, b) => b.score - a.score)
                 .map((p, idx) => (
                   <div
                     key={p.id}
-                    className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
-                      idx === 0 ? 'bg-saffron/20 font-bold text-cobalt' : 'bg-parchment text-slate-700'
+                    onClick={() => setInspectingPlayer(p)}
+                    className={`flex cursor-pointer items-center justify-between rounded-2xl px-4 py-3 transition hover:scale-[1.01] ${
+                      idx === 0
+                        ? 'bg-saffron/20 font-bold text-cobalt border border-saffron/50'
+                        : 'bg-parchment text-slate-700 border border-amber-900/10'
                     }`}
                   >
-                    <span>
-                      #{idx + 1} · {p.name}
-                    </span>
+                    <div className="flex items-center gap-2 text-left">
+                      <span className="text-base font-bold">#{idx + 1}</span>
+                      <div>
+                        <div className="font-bold">{p.name}</div>
+                        <span className="text-[11px] text-slate-500 underline">
+                          {t.viewWonCards} ({p.wonCardIds.length})
+                        </span>
+                      </div>
+                    </div>
                     <span className="text-lg font-bold">
                       {p.score} {t.cardsWon}
                     </span>
@@ -516,16 +675,16 @@ export function App() {
             <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={startNewGame}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-terracotta py-3 text-sm font-bold text-white shadow-sm transition hover:bg-terracotta/90"
+                onClick={() => startNewGame(true)}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-terracotta py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-terracotta/90"
               >
                 <RotateCcw className="h-4 w-4" />
-                {t.playAgain}
+                {t.playAgain} ({t.accumulatedTotal})
               </button>
               <button
                 type="button"
                 onClick={() => setScreen('lobby')}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-amber-900/15 bg-parchment py-3 text-sm font-bold text-cobalt transition hover:bg-amber-100/50"
+                className="flex items-center justify-center gap-2 rounded-2xl border border-amber-900/15 bg-parchment py-3.5 text-sm font-bold text-cobalt transition hover:bg-amber-100/50"
               >
                 <Home className="h-4 w-4" />
                 {t.backHome}
@@ -533,6 +692,13 @@ export function App() {
             </div>
           </main>
         )}
+
+        {/* Won Cards Modal / Drawer */}
+        <WonCardsModal
+          player={inspectingPlayer}
+          locale={activeStudyLocale}
+          onClose={() => setInspectingPlayer(null)}
+        />
       </div>
     </div>
   );

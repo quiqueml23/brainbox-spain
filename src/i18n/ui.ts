@@ -24,12 +24,13 @@ export interface UIStrings {
   playersLabel: string;
   playerDefault: string;
   addPlayer: string;
+  playerStudyShort: string;
+  playerQuestionShort: string;
   timerLabel: string;
   unlimited: string;
   seconds: string;
   studyLangLabel: string;
   questionLangLabel: string;
-  sameAsStudy: string;
   rulesTitle: string;
   rulesSteps: string[];
   studyingHint: string;
@@ -59,33 +60,47 @@ export interface UIStrings {
   questionSide: string;
   peekFront: string;
   backToQuestions: string;
+  // Pre-reveal
+  cardPrepTitle: string;
+  startStudyBtn: string;
+  prepInstructions: string;
+  readyPlayer: string;
+  prepLangHeading: string;
+  // Won cards / accumulated
+  wonCardsTitle: string;
+  noWonCardsYet: string;
+  resetScores: string;
+  viewWonCards: string;
+  close: string;
+  accumulatedTotal: string;
 }
 
 export const UI: Record<Locale, UIStrings> = {
   es: {
     appTitle: 'BrainBox España',
-    appSubtitle: 'Observa la tarjeta, memoriza los detalles antes de que caiga la arena y pon a prueba tu memoria.',
+    appSubtitle: 'Observa la tarjeta, memoriza las imágenes y datos antes de que caiga la arena y pon a prueba tu memoria.',
     startGame: 'Empezar partida',
     soloMode: 'Solitario / Estudio',
     soloDesc: 'Juega a tu ritmo. Tira el dado o repasa las 6 preguntas.',
     multiMode: 'Multijugador local',
-    multiDesc: 'Pass & Play en el mismo dispositivo. Pasa el móvil tras estudiar.',
-    playersLabel: 'Jugadores',
+    multiDesc: 'Pass & Play en el mismo móvil. Cada jugador tiene sus propios idiomas.',
+    playersLabel: 'Jugadores e idiomas',
     playerDefault: 'Jugador',
     addPlayer: 'Añadir jugador',
+    playerStudyShort: 'Estudio:',
+    playerQuestionShort: 'Preguntas:',
     timerLabel: 'Tiempo de estudio',
     unlimited: 'Sin límite',
     seconds: 'seg',
-    studyLangLabel: 'Idioma del anverso (estudio)',
+    studyLangLabel: 'Idioma de la tarjeta (estudio)',
     questionLangLabel: 'Idioma del reverso (preguntas)',
-    sameAsStudy: 'Igual que estudio',
     rulesTitle: 'Cómo se juega',
     rulesSteps: [
-      '1. Observa la tarjeta ilustrada y sus cápsulas de datos durante 10 segundos.',
-      '2. Al terminar el tiempo, la tarjeta se voltea y se tira el dado (1–6).',
-      '3. Responde la pregunta indicada sin mirar el anverso. ¡Si aciertas, te quedas la tarjeta!',
+      '1. Antes de revelar la tarjeta, confirma el idioma de estudio y pulsa «Empezar».',
+      '2. Memoriza las imágenes y sus datos durante 10 segundos antes de que caiga la arena.',
+      '3. La tarjeta se voltea, se tira el dado (1–6) y respondes. ¡Si aciertas, ganas la tarjeta!',
     ],
-    studyingHint: '¡Memoriza los detalles visuales y las fechas!',
+    studyingHint: '¡Memoriza las ilustraciones y los datos debajo de cada una!',
     flipEarly: '¡Listo, voltear ya!',
     timeUp: '¡Tiempo!',
     rollDice: 'Tirar el dado',
@@ -94,8 +109,8 @@ export const UI: Record<Locale, UIStrings> = {
     allQuestionsHint: 'Pulsa cualquier pregunta para ver la respuesta',
     revealAnswer: 'Ver respuesta',
     hideAnswer: 'Ocultar',
-    correctBtn: '¡Acerté!',
-    wrongBtn: 'Fallé',
+    correctBtn: '¡Acertó! (+1 tarjeta)',
+    wrongBtn: 'Falló',
     nextCard: 'Siguiente tarjeta',
     cardOf: 'Tarjeta',
     score: 'Puntos',
@@ -112,31 +127,43 @@ export const UI: Record<Locale, UIStrings> = {
     questionSide: 'Reverso · Preguntas',
     peekFront: 'Comprobar anverso',
     backToQuestions: 'Volver a preguntas',
+    cardPrepTitle: 'Prepárate para memorizar',
+    startStudyBtn: '¡Empezar a memorizar!',
+    prepInstructions: 'Pasa el móvil al jugador. Cuando esté listo, pulsa empezar para iniciar el temporizador.',
+    readyPlayer: '¿Todo listo?',
+    prepLangHeading: 'Idioma para esta tarjeta:',
+    wonCardsTitle: 'Pila de tarjetas ganadas',
+    noWonCardsYet: 'Aún no has ganado tarjetas en esta partida.',
+    resetScores: 'Reiniciar marcador',
+    viewWonCards: 'Ver tarjetas',
+    close: 'Cerrar',
+    accumulatedTotal: 'Puntos acumulados',
   },
   sk: {
     appTitle: 'BrainBox Španielsko',
-    appSubtitle: 'Pozoruj kartu, zapamätaj si detaily skôr než sa presype piesok a otestuj svoju pamäť.',
+    appSubtitle: 'Pozoruj kartu, zapamätaj si obrázky a fakty skôr než sa presype piesok a otestuj svoju pamäť.',
     startGame: 'Začať hru',
     soloMode: 'Sólo / Štúdium',
     soloDesc: 'Hraj vlastným tempom. Hoď kockou alebo si precvič všetkých 6 otázok.',
     multiMode: 'Lokálny multiplayer',
-    multiDesc: 'Pass & Play na jednom zariadení. Po štúdiu podaj mobil ďalej.',
-    playersLabel: 'Hráči',
+    multiDesc: 'Pass & Play na jednom mobile. Každý hráč má vlastné nastavenie jazykov.',
+    playersLabel: 'Hráči a jazyky',
     playerDefault: 'Hráč',
     addPlayer: 'Pridať hráča',
+    playerStudyShort: 'Štúdium:',
+    playerQuestionShort: 'Otázky:',
     timerLabel: 'Čas na štúdium',
     unlimited: 'Bez limitu',
     seconds: 'sek',
-    studyLangLabel: 'Jazyk prednej strany (štúdium)',
+    studyLangLabel: 'Jazyk karty (štúdium)',
     questionLangLabel: 'Jazyk zadnej strany (otázky)',
-    sameAsStudy: 'Rovnaký ako štúdium',
     rulesTitle: 'Ako sa hrá',
     rulesSteps: [
-      '1. Pozorne si prezri ilustrovanú kartu a jej údaje počas 10 sekúnd.',
-      '2. Po uplynutí času sa karta otočí a hodí sa kocka (1–6).',
-      '3. Odpovedz na vyžrebovanú otázku bez pozerania. Ak uhádneš, kartu si necháš!',
+      '1. Pred odhalením karty potvrď jazyk a stlač „Začať“.',
+      '2. Počas 10 sekúnd si zapamätaj ilustrácie a údaje pod nimi.',
+      '3. Karta sa otočí, hodí sa kocka (1–6) a odpovedáš. Ak uhádneš, karta je tvoja!',
     ],
-    studyingHint: 'Zapamätaj si vizuálne detaily a letopočty!',
+    studyingHint: 'Zapamätaj si ilustrácie a údaje pod každou z nich!',
     flipEarly: 'Som pripravený, otočiť!',
     timeUp: 'Čas vypršal!',
     rollDice: 'Hodiť kockou',
@@ -145,7 +172,7 @@ export const UI: Record<Locale, UIStrings> = {
     allQuestionsHint: 'Klikni na ľubovoľnú otázku pre zobrazenie odpovede',
     revealAnswer: 'Zobraziť odpoveď',
     hideAnswer: 'Skryť',
-    correctBtn: 'Správne!',
+    correctBtn: 'Správne! (+1 karta)',
     wrongBtn: 'Nesprávne',
     nextCard: 'Ďalšia karta',
     cardOf: 'Karta',
@@ -163,31 +190,43 @@ export const UI: Record<Locale, UIStrings> = {
     questionSide: 'Zadná strana · Otázky',
     peekFront: 'Skontrolovať prednú stranu',
     backToQuestions: 'Späť na otázky',
+    cardPrepTitle: 'Priprav sa na štúdium',
+    startStudyBtn: 'Začať študovať!',
+    prepInstructions: 'Podaj mobil hráčovi na ťahu. Keď bude pripravený, stlač tlačidlo a spustí sa časovač.',
+    readyPlayer: 'Všetko pripravené?',
+    prepLangHeading: 'Jazyk pre túto kartu:',
+    wonCardsTitle: 'Získané karty',
+    noWonCardsYet: 'V tejto hre zatiaľ nemáš žiadne získané karty.',
+    resetScores: 'Vynulovať skóre',
+    viewWonCards: 'Zobraziť karty',
+    close: 'Zavrieť',
+    accumulatedTotal: 'Celkové skóre',
   },
   en: {
     appTitle: 'BrainBox Spain',
-    appSubtitle: 'Study the card, memorize key details before the sand runs out, and test your memory.',
+    appSubtitle: 'Study the card, memorize the images and facts before the sand runs out, and test your memory.',
     startGame: 'Start Game',
     soloMode: 'Solo / Study',
     soloDesc: 'Play at your own pace. Roll the die or practice all 6 questions.',
     multiMode: 'Local Multiplayer',
-    multiDesc: 'Pass & Play on one device. Hand the phone over after studying.',
-    playersLabel: 'Players',
+    multiDesc: 'Pass & Play on one phone. Each player has their own language profile.',
+    playersLabel: 'Players & Languages',
     playerDefault: 'Player',
     addPlayer: 'Add player',
+    playerStudyShort: 'Study:',
+    playerQuestionShort: 'Questions:',
     timerLabel: 'Study timer',
     unlimited: 'Unlimited',
     seconds: 'sec',
-    studyLangLabel: 'Front side language (study)',
+    studyLangLabel: 'Card language (study)',
     questionLangLabel: 'Back side language (questions)',
-    sameAsStudy: 'Same as study',
     rulesTitle: 'How to play',
     rulesSteps: [
-      '1. Study the illustrated card and its fact badges for 10 seconds.',
-      '2. When time is up, the card flips and the 6-sided die is rolled.',
-      '3. Answer the rolled question without peeking. Get it right to keep the card!',
+      '1. Before revealing the card, confirm the study language and press "Start".',
+      '2. Memorize the illustrations and captions for 10 seconds before the sand runs out.',
+      '3. The card flips, the 6-sided die rolls, and you answer. Get it right to win the card!',
     ],
-    studyingHint: 'Memorize the visual details and historical dates!',
+    studyingHint: 'Memorize the illustrations and the facts beneath each one!',
     flipEarly: 'Ready, flip now!',
     timeUp: "Time's up!",
     rollDice: 'Roll the die',
@@ -196,8 +235,8 @@ export const UI: Record<Locale, UIStrings> = {
     allQuestionsHint: 'Tap any question to reveal its answer',
     revealAnswer: 'Show answer',
     hideAnswer: 'Hide',
-    correctBtn: 'Got it!',
-    wrongBtn: 'Missed it',
+    correctBtn: 'Correct! (+1 card)',
+    wrongBtn: 'Incorrect',
     nextCard: 'Next card',
     cardOf: 'Card',
     score: 'Score',
@@ -214,5 +253,16 @@ export const UI: Record<Locale, UIStrings> = {
     questionSide: 'Back · Questions',
     peekFront: 'Check front side',
     backToQuestions: 'Back to questions',
+    cardPrepTitle: 'Get ready to study',
+    startStudyBtn: 'Start studying!',
+    prepInstructions: 'Hand the phone to the player. When ready, tap start to reveal the card and start the timer.',
+    readyPlayer: 'Ready?',
+    prepLangHeading: 'Language for this card:',
+    wonCardsTitle: 'Won Cards Pile',
+    noWonCardsYet: 'No cards won in this match yet.',
+    resetScores: 'Reset scores',
+    viewWonCards: 'View cards',
+    close: 'Close',
+    accumulatedTotal: 'Accumulated score',
   },
 };

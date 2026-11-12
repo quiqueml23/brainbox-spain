@@ -14,7 +14,7 @@ describe('BrainBox España deck integrity', () => {
     expect(ids.size).toBe(CARDS.length);
   });
 
-  it('every card has complete ES, SK, EN translations, 4+ facts, 6 questions, and a valid image file', () => {
+  it('every card has complete ES, SK, EN translations, at least 3 vignettes with valid images and captions, and 6 questions', () => {
     for (const card of CARDS) {
       for (const loc of LOCALES) {
         expect(card.title[loc].trim().length, `${card.id} title.${loc}`).toBeGreaterThan(0);
@@ -23,12 +23,15 @@ describe('BrainBox España deck integrity', () => {
         expect(card.era[loc].trim().length, `${card.id} era.${loc}`).toBeGreaterThan(0);
       }
 
-      expect(card.facts.length, `${card.id} facts`).toBeGreaterThanOrEqual(4);
-      for (const fact of card.facts) {
+      expect(card.vignettes.length, `${card.id} vignettes count`).toBeGreaterThanOrEqual(3);
+      for (const v of card.vignettes) {
         for (const loc of LOCALES) {
-          expect(fact.label[loc].trim().length).toBeGreaterThan(0);
-          expect(fact.value[loc].trim().length).toBeGreaterThan(0);
+          expect(v.title[loc].trim().length, `${card.id} vignette ${v.id} title.${loc}`).toBeGreaterThan(0);
+          expect(v.caption[loc].trim().length, `${card.id} vignette ${v.id} caption.${loc}`).toBeGreaterThan(0);
         }
+        const relImage = v.image.replace(/^\.\//, '');
+        const fullPath = resolve(process.cwd(), 'public', relImage);
+        expect(existsSync(fullPath), `Missing vignette image ${fullPath}`).toBe(true);
       }
 
       expect(card.questions.length, `${card.id} questions`).toBe(6);
@@ -40,17 +43,15 @@ describe('BrainBox España deck integrity', () => {
           expect(q.answer[loc].trim().length, `${card.id} a${q.number}.${loc}`).toBeGreaterThan(0);
         }
       }
-
-      const relImage = card.image.replace(/^\.\//, '');
-      const fullPath = resolve(process.cwd(), 'public', relImage);
-      expect(existsSync(fullPath), `Missing image ${fullPath}`).toBe(true);
     }
   });
 
-  it('UI dictionary has all 3 locales', () => {
+  it('UI dictionary has all 3 locales and new keys', () => {
     for (const loc of LOCALES) {
       expect(UI[loc].appTitle.length).toBeGreaterThan(0);
-      expect(UI[loc].rulesSteps.length).toBe(3);
+      expect(UI[loc].startStudyBtn.length).toBeGreaterThan(0);
+      expect(UI[loc].playerStudyShort.length).toBeGreaterThan(0);
+      expect(UI[loc].wonCardsTitle.length).toBeGreaterThan(0);
     }
   });
 });
