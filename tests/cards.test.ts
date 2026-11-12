@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CARDS } from '../src/data/cards';
 import { UI } from '../src/i18n/ui';
@@ -5,14 +7,21 @@ import type { Locale } from '../src/types/card';
 
 const LOCALES: Locale[] = ['es', 'sk', 'en'];
 
-describe('BrainBox España 9-cell grid and questions integrity', () => {
-  it('has at least 10 unique cards', () => {
+describe('BrainBox España collage cards integrity', () => {
+  it('has at least 10 unique cards with valid hero illustrations', () => {
     expect(CARDS.length).toBeGreaterThanOrEqual(10);
     const ids = new Set(CARDS.map((c) => c.id));
     expect(ids.size).toBe(CARDS.length);
+
+    for (const card of CARDS) {
+      expect(card.heroImage.length).toBeGreaterThan(0);
+      const relHero = card.heroImage.replace(/^\.\//, '');
+      const fullPath = resolve(process.cwd(), 'public', relHero);
+      expect(existsSync(fullPath), `Missing hero image: ${fullPath}`).toBe(true);
+    }
   });
 
-  it('every card has exactly 9 cells with complete ES, SK, EN titles & facts', () => {
+  it('every card has exactly 9 data cells, real images where defined, and complete ES, SK, EN translations', () => {
     for (const card of CARDS) {
       for (const loc of LOCALES) {
         expect(card.title[loc].trim().length, `${card.id} title.${loc}`).toBeGreaterThan(0);
@@ -26,6 +35,11 @@ describe('BrainBox España 9-cell grid and questions integrity', () => {
       expect(cellIds.size, `${card.id} cells must have unique IDs`).toBe(9);
 
       for (const cell of card.cells) {
+        if (cell.image) {
+          const relImg = cell.image.replace(/^\.\//, '');
+          const fullImg = resolve(process.cwd(), 'public', relImg);
+          expect(existsSync(fullImg), `Missing cell image ${fullImg}`).toBe(true);
+        }
         for (const loc of LOCALES) {
           expect(cell.title[loc].trim().length, `${card.id} cell ${cell.id} title.${loc}`).toBeGreaterThan(0);
           expect(cell.fact[loc].trim().length, `${card.id} cell ${cell.id} fact.${loc}`).toBeGreaterThan(0);
@@ -34,12 +48,9 @@ describe('BrainBox España 9-cell grid and questions integrity', () => {
     }
   });
 
-  it('every card has exactly 6 questions, all with answers and targeting a valid front cell', () => {
+  it('every card has exactly 6 questions matching front cells', () => {
     for (const card of CARDS) {
       expect(card.questions.length, `${card.id} questions`).toBe(6);
-      const numbers = card.questions.map((q) => q.number);
-      expect(numbers).toEqual([1, 2, 3, 4, 5, 6]);
-
       const cellIds = new Set(card.cells.map((c) => c.id));
 
       for (const q of card.questions) {

@@ -6,15 +6,15 @@ export type CardCategory = 'city' | 'monument' | 'person' | 'culture';
 
 export interface CardCell {
   id: string;
-  iconName: string; // Identifier for clean minimalist spot icon/illustration
-  image?: string;
+  image?: string; // Real illustrated painting or crop (NO generic icons)
+  badge?: string; // Bold accent badge like "1605", "1492", "4 Torres", "124", "18"
   title: LocalizedText;
   fact: LocalizedText;
 }
 
 export interface CardQuestion {
   number: 1 | 2 | 3 | 4 | 5 | 6;
-  targetCellId?: string; // Link to the exact cell on the front
+  targetCellId?: string;
   question: LocalizedText;
   answer: LocalizedText;
 }
@@ -27,8 +27,9 @@ export interface BrainCard {
   title: LocalizedText;
   subtitle: LocalizedText;
   accentColor: string;
-  cells: CardCell[]; // 9 clear cells in a 3x3 grid
-  questions: CardQuestion[]; // 6 questions directly from the 9 cells
+  heroImage: string; // Big main illustration for the collage
+  cells: CardCell[]; // 9 data points displayed organically (with real images and bold stickers)
+  questions: CardQuestion[]; // 6 questions directly from the card
 }
 
 export interface PlayerProfile {

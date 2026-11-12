@@ -1,7 +1,6 @@
 import { Eye, EyeOff, MapPin, Play, Sparkles } from 'lucide-react';
 import { CATEGORY_LABELS, UI } from '../i18n/ui';
 import type { BrainCard, CardPhase, Locale } from '../types/card';
-import { CellIcon } from './CellIcon';
 import { LanguageToggle } from './LanguageToggle';
 
 interface GameCardProps {
@@ -41,6 +40,10 @@ export function GameCard({
   const isQuestions = phase === 'questions' && !peekingFront;
   const studyUI = UI[studyLocale];
   const questionUI = UI[questionLocale];
+
+  // Separate cells with real illustrated images and cells with text sticker badges
+  const imageCells = card.cells.filter((c) => Boolean(c.image));
+  const badgeCells = card.cells.filter((c) => !c.image);
 
   // 1. PRE-REVEAL SCREEN (Before the timer starts)
   if (isPrep) {
@@ -137,7 +140,7 @@ export function GameCard({
     );
   }
 
-  // 2. REVEALED CARD (Studying vs Questions)
+  // 2. REVEALED CARD: DYNAMIC BRAINBOX COLLAGE (ZERO GENERIC ICONS, LARGE PICTURES & DATA STICKERS)
   return (
     <div className="perspective-1200 w-full">
       <div
@@ -145,24 +148,23 @@ export function GameCard({
           isQuestions ? 'rotate-y-180' : ''
         }`}
       >
-        {/* FRONT: STUDY SIDE (BRAINBOX 3x3 GRID OF 9 CELLS) */}
+        {/* FRONT: STUDY SIDE (COLLAGE / SCRAPBOOK BOARD GAME STYLE) */}
         <div
-          className={`backface-hidden w-full rounded-3xl border-4 bg-white p-3.5 shadow-xl sm:p-5 ${
+          className={`backface-hidden w-full rounded-3xl border-4 bg-white p-3 shadow-xl sm:p-4 ${
             isQuestions ? 'pointer-events-none invisible absolute inset-0' : 'relative'
           }`}
           style={{ borderColor: card.accentColor }}
         >
-          {/* Card Top Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-2">
-            <div className="flex items-center gap-2">
+          {/* Header Strip */}
+          <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-amber-900/10 pb-1.5">
+            <div className="flex items-center gap-1.5">
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white"
+                className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
                 style={{ backgroundColor: card.accentColor }}
               >
-                <Sparkles className="h-3 w-3" />
                 {CATEGORY_LABELS[card.category][studyLocale]}
               </span>
-              <span className="text-xs font-bold text-slate-600">
+              <span className="text-[11px] font-bold text-slate-600 truncate">
                 {card.region[studyLocale]}
               </span>
             </div>
@@ -170,39 +172,122 @@ export function GameCard({
             <LanguageToggle value={studyLocale} onChange={onChangeStudyLocale} size="sm" />
           </div>
 
-          {/* Header Title */}
-          <div className="mt-1.5 text-center">
-            <h2 className="font-display text-2xl font-bold leading-tight text-cobalt sm:text-3xl">
+          {/* Title Banner */}
+          <div className="my-1 text-center">
+            <h2 className="font-display text-xl font-bold leading-tight text-cobalt sm:text-2xl">
               {card.title[studyLocale]}
             </h2>
-            <p className="text-xs font-semibold text-slate-600">
+            <p className="text-[11px] font-semibold text-slate-600 leading-none">
               {card.subtitle[studyLocale]}
             </p>
           </div>
 
-          {/* BrainBox 3x3 Grid of 9 Clean Data Cells */}
-          <div className="mt-2.5 grid grid-cols-3 grid-rows-3 gap-1.5 sm:gap-2">
-            {card.cells.map((cell) => (
-              <div
-                key={cell.id}
-                className="group flex flex-col items-center justify-between rounded-xl border border-amber-900/10 bg-parchment/60 p-1.5 text-center shadow-xs transition hover:bg-parchment sm:p-2"
-              >
-                <CellIcon
-                  name={cell.iconName}
-                  image={cell.image}
-                  alt={cell.title[studyLocale]}
-                  color={card.accentColor}
+          {/* DYNAMIC COLLAGE: HERO PAINTING + PROMINENT SPOT CROMOS */}
+          <div className="space-y-2">
+            {/* Top Row: Big Hero Illustration + 1 Featured Polaroid Cromo */}
+            <div className="grid grid-cols-12 gap-2 items-stretch">
+              {/* Main Hero Painting (Wide & Prominent) */}
+              <div className="col-span-7 sm:col-span-8 relative overflow-hidden rounded-2xl border-2 border-amber-900/10 shadow-sm bg-parchment h-36 sm:h-44">
+                <img
+                  src={card.heroImage}
+                  alt={card.title[studyLocale]}
+                  className="h-full w-full object-cover"
+                  loading="eager"
                 />
-                <div className="mt-1 w-full min-w-0">
-                  <h4 className="text-[11px] font-bold text-cobalt leading-tight truncate sm:text-xs">
-                    {cell.title[studyLocale]}
-                  </h4>
-                  <p className="mt-0.5 text-[10px] font-semibold text-slate-700 leading-tight sm:text-[11px]">
+                <div className="absolute bottom-1.5 left-1.5 rounded-lg bg-black/60 px-2 py-0.5 backdrop-blur-xs">
+                  <span className="text-[10px] font-bold text-white tracking-wide">
+                    {card.title[studyLocale]}
+                  </span>
+                </div>
+              </div>
+
+              {/* Featured Detail Cromo (Tilted Polaroid Style) */}
+              {imageCells[0] && (
+                <div className="col-span-5 sm:col-span-4 flex flex-col justify-between rounded-2xl border-2 border-amber-900/15 bg-parchment/80 p-1.5 shadow-sm transform -rotate-1 hover:rotate-0 transition">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-amber-900/10 bg-white">
+                    <img
+                      src={imageCells[0].image}
+                      alt={imageCells[0].title[studyLocale]}
+                      className="h-full w-full object-cover"
+                      loading="eager"
+                    />
+                    {imageCells[0].badge && (
+                      <span className="absolute top-1 right-1 rounded-md bg-terracotta px-1.5 py-0.2 text-[9px] font-extrabold text-white shadow-xs">
+                        {imageCells[0].badge}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-center">
+                    <h4 className="text-[11px] font-bold text-cobalt leading-tight">
+                      {imageCells[0].title[studyLocale]}
+                    </h4>
+                    <p className="text-[10px] font-semibold text-slate-700 leading-tight">
+                      {imageCells[0].fact[studyLocale]}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Middle Row: Additional Real Image Cromos */}
+            {imageCells.length > 1 && (
+              <div className="grid grid-cols-2 gap-2">
+                {imageCells.slice(1, 3).map((cell, idx) => (
+                  <div
+                    key={cell.id}
+                    className={`flex items-center gap-2 rounded-2xl border-2 border-amber-900/15 bg-parchment/90 p-1.5 shadow-sm transition ${
+                      idx === 0 ? 'transform rotate-1' : 'transform -rotate-1'
+                    }`}
+                  >
+                    <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border border-amber-900/10 bg-white shadow-xs">
+                      <img
+                        src={cell.image}
+                        alt={cell.title[studyLocale]}
+                        className="h-full w-full object-cover"
+                        loading="eager"
+                      />
+                      {cell.badge && (
+                        <span className="absolute bottom-0.5 right-0.5 rounded-md bg-cobalt px-1 py-0.2 text-[8px] font-extrabold text-white">
+                          {cell.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-cobalt leading-tight">
+                        {cell.title[studyLocale]}
+                      </h4>
+                      <p className="mt-0.5 text-[10px] sm:text-[11px] font-medium leading-tight text-slate-700">
+                        {cell.fact[studyLocale]}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Bottom Row: Game Sticker & Stamp Badges for the Remaining Key Facts */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {badgeCells.map((cell) => (
+                <div
+                  key={cell.id}
+                  className="rounded-xl border border-amber-900/10 bg-white/95 px-2.5 py-1.5 shadow-xs"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-bold text-cobalt truncate">
+                      {cell.title[studyLocale]}
+                    </span>
+                    {cell.badge && (
+                      <span className="rounded bg-saffron/25 px-1 py-0.2 text-[9px] font-black text-amber-900">
+                        {cell.badge}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[10px] font-semibold text-slate-700 leading-tight">
                     {cell.fact[studyLocale]}
                   </p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Peek Back Action */}
