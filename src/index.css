@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+}
+
+body {
+  background-color: #faf5eb;
+  background-image: radial-gradient(rgba(200, 75, 49, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}

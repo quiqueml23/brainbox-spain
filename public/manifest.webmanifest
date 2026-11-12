@@ -1,0 +1,18 @@
+{
+  "name": "BrainBox España",
+  "short_name": "BrainBox ES",
+  "description": "Juego de memoria visual e historia de España en español, eslovaco e inglés.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FAF5EB",
+  "theme_color": "#C84B31",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
