@@ -1,6 +1,7 @@
 import { Eye, EyeOff, MapPin, Play, Sparkles } from 'lucide-react';
 import { CATEGORY_LABELS, UI } from '../i18n/ui';
 import type { BrainCard, CardPhase, Locale } from '../types/card';
+import { CellIcon } from './CellIcon';
 import { LanguageToggle } from './LanguageToggle';
 
 interface GameCardProps {
@@ -144,7 +145,7 @@ export function GameCard({
           isQuestions ? 'rotate-y-180' : ''
         }`}
       >
-        {/* FRONT: STUDY SIDE (BRAINBOX MULTI-VIGNETTE STYLE) */}
+        {/* FRONT: STUDY SIDE (BRAINBOX 3x3 GRID OF 9 CELLS) */}
         <div
           className={`backface-hidden w-full rounded-3xl border-4 bg-white p-3.5 shadow-xl sm:p-5 ${
             isQuestions ? 'pointer-events-none invisible absolute inset-0' : 'relative'
@@ -152,7 +153,7 @@ export function GameCard({
           style={{ borderColor: card.accentColor }}
         >
           {/* Card Top Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-2">
             <div className="flex items-center gap-2">
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white"
@@ -170,39 +171,34 @@ export function GameCard({
           </div>
 
           {/* Header Title */}
-          <div className="mt-2 text-center">
+          <div className="mt-1.5 text-center">
             <h2 className="font-display text-2xl font-bold leading-tight text-cobalt sm:text-3xl">
               {card.title[studyLocale]}
             </h2>
-            <p className="text-xs font-semibold text-slate-600 sm:text-sm">
+            <p className="text-xs font-semibold text-slate-600">
               {card.subtitle[studyLocale]}
             </p>
           </div>
 
-          {/* BrainBox Multi-Image Grid with Captions Underneath */}
-          <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-            {card.vignettes.map((v) => (
+          {/* BrainBox 3x3 Grid of 9 Clean Data Cells */}
+          <div className="mt-2.5 grid grid-cols-3 grid-rows-3 gap-1.5 sm:gap-2">
+            {card.cells.map((cell) => (
               <div
-                key={v.id}
-                className="group flex flex-col overflow-hidden rounded-2xl border-2 border-amber-900/10 bg-parchment/60 p-2 shadow-sm transition hover:bg-parchment"
+                key={cell.id}
+                className="group flex flex-col items-center justify-between rounded-xl border border-amber-900/10 bg-parchment/60 p-1.5 text-center shadow-xs transition hover:bg-parchment sm:p-2"
               >
-                {/* Vignette Illustration */}
-                <div className="relative aspect-video sm:aspect-square w-full overflow-hidden rounded-xl border border-amber-900/10 bg-white">
-                  <img
-                    src={v.image}
-                    alt={v.title[studyLocale]}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="eager"
-                  />
-                </div>
-
-                {/* Vignette Data & Caption Underneath Image */}
-                <div className="mt-2 flex-1 text-center sm:text-left">
-                  <h4 className="text-xs font-bold text-cobalt leading-snug">
-                    {v.title[studyLocale]}
+                <CellIcon
+                  name={cell.iconName}
+                  image={cell.image}
+                  alt={cell.title[studyLocale]}
+                  color={card.accentColor}
+                />
+                <div className="mt-1 w-full min-w-0">
+                  <h4 className="text-[11px] font-bold text-cobalt leading-tight truncate sm:text-xs">
+                    {cell.title[studyLocale]}
                   </h4>
-                  <p className="mt-0.5 text-[11px] font-medium leading-relaxed text-slate-750 text-slate-700">
-                    {v.caption[studyLocale]}
+                  <p className="mt-0.5 text-[10px] font-semibold text-slate-700 leading-tight sm:text-[11px]">
+                    {cell.fact[studyLocale]}
                   </p>
                 </div>
               </div>
@@ -222,14 +218,14 @@ export function GameCard({
           )}
         </div>
 
-        {/* BACK: QUESTIONS SIDE */}
+        {/* BACK: QUESTIONS SIDE (ALL QUESTIONS DIRECTLY GROUNDED IN THE 9 CELLS) */}
         <div
           className={`backface-hidden rotate-y-180 w-full rounded-3xl border-4 bg-parchment p-4 shadow-xl sm:p-5 ${
             !isQuestions ? 'pointer-events-none invisible absolute inset-0' : 'relative'
           }`}
           style={{ borderColor: card.accentColor }}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/10 pb-2">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 {questionUI.questionSide}
@@ -242,9 +238,9 @@ export function GameCard({
             <LanguageToggle value={questionLocale} onChange={onChangeQuestionLocale} size="sm" />
           </div>
 
-          <p className="mt-1.5 text-xs text-slate-500">{questionUI.allQuestionsHint}</p>
+          <p className="mt-1 text-xs text-slate-500">{questionUI.allQuestionsHint}</p>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-2.5 space-y-1.5 sm:space-y-2">
             {card.questions.map((q) => {
               const isSelected = rolledNumber === q.number;
               const isRevealed = Boolean(revealedAnswers[q.number]);
@@ -261,13 +257,13 @@ export function GameCard({
                       onToggleAnswer(q.number);
                     }
                   }}
-                  className={`cursor-pointer rounded-2xl border-2 p-3 transition-all ${
+                  className={`cursor-pointer rounded-2xl border-2 p-2.5 transition-all ${
                     isSelected
                       ? 'border-terracotta bg-white shadow-md ring-2 ring-saffron/40'
                       : 'border-amber-900/10 bg-white/80 hover:border-amber-900/25 hover:bg-white'
                   }`}
                 >
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-2">
                     <span
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
                         isSelected
@@ -279,20 +275,20 @@ export function GameCard({
                     </span>
                     <div className="min-w-0 flex-1">
                       {isSelected && (
-                        <span className="mb-1 inline-block rounded-full bg-saffron/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                        <span className="mb-0.5 inline-block rounded-full bg-saffron/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
                           {questionUI.selectedQuestion}
                         </span>
                       )}
-                      <p className="text-sm font-semibold leading-snug text-slate-900">
+                      <p className="text-xs sm:text-sm font-semibold leading-snug text-slate-900">
                         {q.question[questionLocale]}
                       </p>
 
                       {isRevealed ? (
-                        <div className="mt-2 rounded-xl bg-olive/10 px-3 py-1.5 text-sm font-bold text-olive">
+                        <div className="mt-1.5 rounded-xl bg-olive/10 px-3 py-1 text-xs sm:text-sm font-bold text-olive">
                           {q.answer[questionLocale]}
                         </div>
                       ) : (
-                        <span className="mt-1.5 inline-block text-xs font-semibold text-terracotta">
+                        <span className="mt-1 inline-block text-xs font-semibold text-terracotta">
                           {questionUI.revealAnswer} →
                         </span>
                       )}
@@ -306,7 +302,7 @@ export function GameCard({
           <button
             type="button"
             onClick={onTogglePeekFront}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-cobalt/20 bg-white py-2.5 text-xs font-semibold text-cobalt transition hover:bg-cobalt/5 sm:text-sm"
+            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl border border-cobalt/20 bg-white py-2 text-xs font-semibold text-cobalt transition hover:bg-cobalt/5 sm:text-sm"
           >
             <Eye className="h-4 w-4" />
             {questionUI.peekFront}

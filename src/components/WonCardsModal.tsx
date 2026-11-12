@@ -58,11 +58,12 @@ export function WonCardsModal({ player, locale, onClose }: WonCardsModalProps) {
                 key={c.id}
                 className="flex items-center gap-3 rounded-2xl border border-amber-900/10 bg-parchment/60 p-2.5 transition hover:bg-parchment"
               >
-                <img
-                  src={c.vignettes[0]?.image || './cards/alhambra.jpg'}
-                  alt={c.title[locale]}
-                  className="h-16 w-16 shrink-0 rounded-xl object-cover shadow-sm"
-                />
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-display text-lg font-bold text-white shadow-sm"
+                  style={{ backgroundColor: c.accentColor }}
+                >
+                  {c.title[locale].charAt(0)}
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span

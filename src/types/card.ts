@@ -4,15 +4,17 @@ export type LocalizedText = Record<Locale, string>;
 
 export type CardCategory = 'city' | 'monument' | 'person' | 'culture';
 
-export interface CardVignette {
+export interface CardCell {
   id: string;
-  image: string;
+  iconName: string; // Identifier for clean minimalist spot icon/illustration
+  image?: string;
   title: LocalizedText;
-  caption: LocalizedText;
+  fact: LocalizedText;
 }
 
 export interface CardQuestion {
   number: 1 | 2 | 3 | 4 | 5 | 6;
+  targetCellId?: string; // Link to the exact cell on the front
   question: LocalizedText;
   answer: LocalizedText;
 }
@@ -25,8 +27,8 @@ export interface BrainCard {
   title: LocalizedText;
   subtitle: LocalizedText;
   accentColor: string;
-  vignettes: CardVignette[];
-  questions: CardQuestion[];
+  cells: CardCell[]; // 9 clear cells in a 3x3 grid
+  questions: CardQuestion[]; // 6 questions directly from the 9 cells
 }
 
 export interface PlayerProfile {

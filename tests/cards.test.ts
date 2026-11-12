@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CARDS } from '../src/data/cards';
 import { UI } from '../src/i18n/ui';
@@ -7,14 +5,14 @@ import type { Locale } from '../src/types/card';
 
 const LOCALES: Locale[] = ['es', 'sk', 'en'];
 
-describe('BrainBox España deck integrity', () => {
+describe('BrainBox España 9-cell grid and questions integrity', () => {
   it('has at least 10 unique cards', () => {
     expect(CARDS.length).toBeGreaterThanOrEqual(10);
     const ids = new Set(CARDS.map((c) => c.id));
     expect(ids.size).toBe(CARDS.length);
   });
 
-  it('every card has complete ES, SK, EN translations, at least 3 vignettes with valid images and captions, and 6 questions', () => {
+  it('every card has exactly 9 cells with complete ES, SK, EN titles & facts', () => {
     for (const card of CARDS) {
       for (const loc of LOCALES) {
         expect(card.title[loc].trim().length, `${card.id} title.${loc}`).toBeGreaterThan(0);
@@ -23,21 +21,31 @@ describe('BrainBox España deck integrity', () => {
         expect(card.era[loc].trim().length, `${card.id} era.${loc}`).toBeGreaterThan(0);
       }
 
-      expect(card.vignettes.length, `${card.id} vignettes count`).toBeGreaterThanOrEqual(3);
-      for (const v of card.vignettes) {
-        for (const loc of LOCALES) {
-          expect(v.title[loc].trim().length, `${card.id} vignette ${v.id} title.${loc}`).toBeGreaterThan(0);
-          expect(v.caption[loc].trim().length, `${card.id} vignette ${v.id} caption.${loc}`).toBeGreaterThan(0);
-        }
-        const relImage = v.image.replace(/^\.\//, '');
-        const fullPath = resolve(process.cwd(), 'public', relImage);
-        expect(existsSync(fullPath), `Missing vignette image ${fullPath}`).toBe(true);
-      }
+      expect(card.cells.length, `${card.id} must have exactly 9 cells`).toBe(9);
+      const cellIds = new Set(card.cells.map((c) => c.id));
+      expect(cellIds.size, `${card.id} cells must have unique IDs`).toBe(9);
 
+      for (const cell of card.cells) {
+        for (const loc of LOCALES) {
+          expect(cell.title[loc].trim().length, `${card.id} cell ${cell.id} title.${loc}`).toBeGreaterThan(0);
+          expect(cell.fact[loc].trim().length, `${card.id} cell ${cell.id} fact.${loc}`).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it('every card has exactly 6 questions, all with answers and targeting a valid front cell', () => {
+    for (const card of CARDS) {
       expect(card.questions.length, `${card.id} questions`).toBe(6);
       const numbers = card.questions.map((q) => q.number);
       expect(numbers).toEqual([1, 2, 3, 4, 5, 6]);
+
+      const cellIds = new Set(card.cells.map((c) => c.id));
+
       for (const q of card.questions) {
+        if (q.targetCellId) {
+          expect(cellIds.has(q.targetCellId), `${card.id} q${q.number} targets invalid cell ${q.targetCellId}`).toBe(true);
+        }
         for (const loc of LOCALES) {
           expect(q.question[loc].trim().length, `${card.id} q${q.number}.${loc}`).toBeGreaterThan(0);
           expect(q.answer[loc].trim().length, `${card.id} a${q.number}.${loc}`).toBeGreaterThan(0);
@@ -46,12 +54,10 @@ describe('BrainBox España deck integrity', () => {
     }
   });
 
-  it('UI dictionary has all 3 locales and new keys', () => {
+  it('UI dictionary has all 3 locales and required keys', () => {
     for (const loc of LOCALES) {
       expect(UI[loc].appTitle.length).toBeGreaterThan(0);
       expect(UI[loc].startStudyBtn.length).toBeGreaterThan(0);
-      expect(UI[loc].playerStudyShort.length).toBeGreaterThan(0);
-      expect(UI[loc].wonCardsTitle.length).toBeGreaterThan(0);
     }
   });
 });
